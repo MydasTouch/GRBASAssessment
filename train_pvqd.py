@@ -9,7 +9,7 @@ from transformers import HubertModel
 from transformers import AutoFeatureExtractor, WhisperModel
 
 from model import AssessGradeForDBS
-from dataset import MyDataset
+from dataset import PVQDDataset
 
 
 def main():
@@ -52,10 +52,10 @@ def main():
     grbas_dim = 1 # 1: Grade  5: GRBAS
     multi_indicator = True
     
-    trainset = MyDataset(wavdir, trainlist, feature_extractor, multi_indicator)
+    trainset = PVQDDataset(wavdir, trainlist, feature_extractor, multi_indicator)
     trainloader = DataLoader(trainset, batch_size=1, shuffle=True, num_workers=1, collate_fn=trainset.collate_fn)
     
-    validset = MyDataset(wavdir, validlist, feature_extractor, multi_indicator)
+    validset = PVQDDataset(wavdir, validlist, feature_extractor, multi_indicator)
     validloader = DataLoader(validset, batch_size=1, shuffle=True, num_workers=1, collate_fn=validset.collate_fn)
     
     net = GRBASPredictor(ssl_model, asr_model, decoder_input_ids, ssl_out_dim, grbas_dim)
