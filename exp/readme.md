@@ -24,7 +24,7 @@
 | ruuning speech (patient level)   |  2.91   |
 | vowel /a/ (patient level)   | 2.59    |
 
-|  PT019     | Grade |
+|  SJ4008     | Grade |
 | ----------- | ----------- |
 | label      |  0.50     |
 | ruuning speech (patient level)   |  0.39  |
