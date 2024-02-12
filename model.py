@@ -81,5 +81,7 @@ class GRBASPredictor(nn.Module):
         all_features = self.downstream_layer_1(all_features)
 
         all_features = torch.mean(all_features,dim=1)
-      
+        
+        #classification
+        #all_features = torch.nn.functional.softmax(all_features,dim=-1)
         return all_features.squeeze(1)
