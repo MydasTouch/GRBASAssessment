@@ -1,6 +1,6 @@
 # place the wav
 
-├─train_speech 
+├─train_speech  
 ├─dev_speech  
 ├─test_speech  
 ├─train_a  
