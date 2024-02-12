@@ -65,21 +65,23 @@ class PVQDDataset(Dataset):
             return asr_mel_features, output_wavs,mel_specgrams, scores, wavnames
       
 class DBSDataset(Dataset):
-    def __init__(self, mos_list):
-        # a_dir, i_dir, u_dir, e_dir, o_dir, G_score, R_score, B_score, A_score, S_score
+    def __init__(self, dbs_list,feature_extractor, multi_indicator):
         self.grbas_lookup = { }
-        f = open(mos_list, 'r')
+        f = open(dbs_list, 'r')
         for line in f:
             parts = line.strip().split(',')
             wavname_a = parts[0]
-            # grbas = [float(parts[5]),float(parts[6]),float(parts[7]),float(parts[8]),float(parts[9])]
-            grbas =  [float(parts[5])] # here we only predict grade
+            if multi_indicator:
+                grbas = [float(parts[5]),float(parts[6]),float(parts[7]),float(parts[8]),float(parts[9])]
+            else:
+                grbas =  [float(parts[5])]
             self.grbas_lookup[wavname_a] = grbas
+
         self.wavnames = sorted(self.grbas_lookup.keys())
+        self.feature_extractor = feature_extractor
+
 
     def __getitem__(self, idx):
-        #  ../a/patientID_status_number.wav
-        #  ../i/patientID_status.wav
         wavname = self.wavnames[idx]
         wavpath_a = wavname
         base_dir,wave_dir = wavname.rsplit("/",2)[0],wavname.rsplit("/",2)[2]
@@ -89,36 +91,44 @@ class DBSDataset(Dataset):
         wavpath_e = os.path.join(base_dir,"e",wave_dir.rsplit("_",1)[0]+".wav")
         wavpath_o = os.path.join(base_dir,"o",wave_dir.rsplit("_",1)[0]+".wav")
         wav_a = torchaudio.load(wavpath_a)[0]
+        _,T = wav_a.shape
+        wav_a = wav_a[:,T//4:T//4+T//2]
+
         wav_i = torchaudio.load(wavpath_i)[0]
+        _,T = wav_i.shape
+        wav_i = wav_i[:,T//4:T//4+T//2]
+
         wav_u = torchaudio.load(wavpath_u)[0]
+        _,T = wav_u.shape
+        wav_u = wav_u[:,T//4:T//4+T//2]
+
         wav_e = torchaudio.load(wavpath_e)[0]
+        _,T = wav_e.shape
+        wav_e = wav_e[:,T//4:T//4+T//2]
+
         wav_o = torchaudio.load(wavpath_o)[0]
+        _,T = wav_o.shape
+        wav_o = wav_o[:,T//4:T//4+T//2]
         score = self.grbas_lookup[wavname]
         return wav_a,wav_i,wav_u,wav_e,wav_o, score, wavname
 
     def __len__(self):
         return len(self.wavnames)
 
-    def collate_fn(self, batch):
-        # batch_size 1
+    def collate_fn(self, batch):  ## zero padding
         wav_a,wav_i,wav_u,wav_e,wav_o, score, wavname = zip(*batch)
 
         output_wavs = torch.cat((wav_a[0],wav_i[0],wav_u[0],wav_e[0],wav_o[0]),dim=-1)
-        # output_wavs = torch.cat((wav_a[0],wav_i[0]),dim=-1)
-        transform = torchaudio.transforms.MelSpectrogram(sample_rate = 16000,n_fft =400,win_length = 400,hop_length =320,n_mels=40, center=False)
+
+        transform = torchaudio.transforms.MelSpectrogram(sample_rate = 16000,n_fft =400,win_length = 400,hop_length =320
+            ,n_mels=40, center=False)
         mel_specgram = transform(output_wavs).squeeze(0)
         delta = torchaudio.functional.compute_deltas(mel_specgram)
         delta2 = torchaudio.functional.compute_deltas(delta)
         mel_specgram = torch.cat((mel_specgram,delta,delta2),dim=0)
+        output_wav = output_wavs.to('cpu').detach().numpy().copy()
+
+        asr_mel_feature = self.feature_extractor(output_wav, return_tensors="pt",sampling_rate=16000).input_features
 
         grbas = torch.tensor(score[0]).unsqueeze(0)
-
-        output_wavs = output_wavs.squeeze(0)
-        T = output_wavs.size()
-        intervals = librosa.effects.split(output_wavs)
-        mask = torch.zeros(T)
-        for interval in intervals:
-            info_intervel = torch.ones(interval[1]-interval[0])
-            mask[interval[0]:interval[1]]=info_intervel
-        output_wavs = output_wavs.unsqueeze(0)
-        return output_wavs, mel_specgram,grbas, wavname,mask.unsqueeze(0)
+        return asr_mel_feature, output_wavs,mel_specgram, grbas, wavname
