@@ -15,3 +15,17 @@ test_pvqd.py
 train_dbs.py
 
 test_dbs.py
+
+
+```BibTex
+@article{walden2022perceptual,
+  title={Perceptual voice qualities database (pvqd): Database characteristics},
+  author={Walden, Patrick R},
+  journal={Journal of Voice},
+  volume={36},
+  number={6},
+  pages={875--e15},
+  year={2022},
+  publisher={Elsevier}
+}
+```
